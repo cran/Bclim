@@ -32,7 +32,7 @@ ans.all <- foreach(i = icount(n)) %dopar% {
 # ans.all <- list()
 # for(i in 1:n) {
 #   cat("\r",i)
-#   ans.all[[i]] <- Mclust(MDP2[,i,],G=G,modelName="EII",warn=mixwarnings)
+#   ans.all[[i]] <- Mclust(MDP2[,i,],G=G,modelNames="EII",warn=mixwarnings)
 # }
   
   for(i in 1:n) {

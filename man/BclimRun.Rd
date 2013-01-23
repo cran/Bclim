@@ -57,7 +57,7 @@ A list of class Bclim is returned with the following components:
 }
 
 \references{
-There will shortly be a reference to an Arxiv paper here
+See Arxiv paper at http://arxiv.org/abs/1206.5009.
 }
 \author{
 Andrew Parnell <andrew.parnell@ucd.ie>

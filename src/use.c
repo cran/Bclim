@@ -484,7 +484,7 @@ for(i=0;i<dim-1;i++) out[i+1][i] = -RWprecs[i];
 double dlinvgauss(double x, double mu, double lambda) {
 // Log inverse gaussian density
 double dens;
-
+// Note: this is the R version of the IG distribution (different to the one used in the NIG paper)
 dens = (log(lambda) - log(2 * PI) - 3 * log(x))/2 - lambda * pow(x - mu,2)/(2 * pow(mu,2) * x);
 return(dens);
 }
@@ -558,8 +558,8 @@ int samplegrid(int gridsize,int oldindex,int step) {
 
 double dlinvgauss2(double x, double mu, double phi) {
 // Alternative version of log inverse gaussian density
+// Note: this is the Karlis (IG2) version of the IG distribution (different to the one used in R)
 double dens;
-
 dens = 0.5*log(mu)+0.5*log(phi)-1.5*log(x)+phi-0.5*phi*(x/mu+mu/x)-0.5*log(2*PI);
 return(dens);
 }

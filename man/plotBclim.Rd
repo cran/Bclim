@@ -60,7 +60,7 @@ Andrew Parnell <andrew.parnell@ucd.ie> and James Sweeney
 The main Bclim function is \code{\link{BclimRun}}. See there for all the other information.
 }
 \examples{
-##See main function for examples
+## See help for BclimMCMC and webpage at http://mathsci.ucd.ie/~parnell_a/Bclim.html
 }
 \keyword{ model }
 \keyword{ multivariate }

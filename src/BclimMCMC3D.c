@@ -53,10 +53,12 @@ if(CurrMixPrec==NULL) error("Can't allocate memory");
 
 // Turn MixPrec, MixMeans and MixPro into arrays for easy lookup
 for(i=0;i<*n;i++) for(k=0;k<*G;k++) MyMixPrec[i][k] = MixPrec[k*(*n)+i];
+//for(i=0;i<*n;i++) for(k=0;k<*G;k++) Rprintf("%lf \n",MyMixPrec[i][k]);
 for(i=0;i<*n;i++) {
 	for(j=0;j<*m;j++) {
 		for(k=0;k<*G;k++) {
 			MyMixMean[i][j][k] = MixMeans[k*(*m)*(*n)+j*(*n)+i];
+      //Rprintf("%lf \n",MyMixMean[i][j][k]);
 		}
 	}
 }
@@ -95,7 +97,7 @@ if(mvnvar==NULL) error("Can't allocate memory");
 for(i=0;i<*n-1;i++) for(j=0;j<*m;j++) v[i][j] =  vstart[i];
 for(i=0;i<*m;i++) mu[i] = muval[i];
 for(i=0;i<*m;i++) phi[i] = phival[i];
-for(i=0;i<*n;i++) K[i] = Kstart[i];    
+for(i=0;i<*n;i++) K[i] = Kstart[i]-1;    
 
 // Set up the matrices I'll need;
 double *mujk,*Djk,*VDmu,*Vz,*mujkstar,*Djkstar,*VDmustar,*Dmu,*Dmustar;
@@ -182,10 +184,14 @@ for(iter=0;iter<*iterations;iter++) {
             mujk[i] =  MyMixMean[i][j][K[i]];
             Djk[i] = MyMixPrec[i][K[i]];
             Dmu[i] = Djk[i]*mujk[i];
-
+            //Rprintf("%lf %i \n",Djk[i],K[i]-1);
+            //Rprintf("%lf \n",Djk[i]);
         }
 
+
         for(l=0;l<*n-1;l++) tempv[l] = v[l][j];
+        //for(l=0;l<*n;l++) Rprintf("tempv=%lf \n",tempv[l]);
+        //for(l=0;l<*n;l++) Rprintf("Djk=%lf \n",Djk[l]);
         maketri(tempv,*n,Djk,triupper,tridiag,trilower);       
         trisolve (*n, trilower,tridiag, triupper, Dmu, VDmu);
 
@@ -204,11 +210,11 @@ for(iter=0;iter<*iterations;iter++) {
             logdetratio = -0.5*log(1+(1/pow(vsqrtstar,2)-1/v[i][j])*tzVz);
             expnum = -pow(VDmu[i]-VDmu[i+1],2);
             expden = 2*((1/(1/pow(vsqrtstar,2)-1/v[i][j]))+tzVz);
-            igratio = dlinvgauss2(pow(vsqrtstar,2),mu[j]*diffchron[j],phi[j]*diffchron[j])-dlinvgauss2(v[i][j],mu[j]*diffchron[j],phi[j]*diffchron[j]);
+            igratio = dlinvgauss2(pow(vsqrtstar,2),mu[j]*diffchron[i],phi[j]*diffchron[i])-dlinvgauss2(v[i][j],mu[j]*diffchron[i],phi[j]*diffchron[i]);
             logRv = logdetratio + expnum/expden + igratio + 0.5*(log(v[i][j])-log(pow(vsqrtstar,2)));            
-                                                                                                                                                            
+            
             accept = (int)UpdateMCMC(logRv,1,0,vsqrtstarrat);
-			if(accept==1) {
+      			if(accept==1) {
                 v[i][j] = pow(vsqrtstar,2);
                 for(l=0;l<*n-1;l++) tempv[l] = v[l][j];
                 maketri(tempv,*n,Djk,triupper,tridiag,trilower);       
@@ -218,6 +224,30 @@ for(iter=0;iter<*iterations;iter++) {
  
         } // End of i loop for v update
 /*
+
+if(i==2) {
+            Rprintf("i=%i \n",i+1);
+            Rprintf("v=");
+            for(l=0;l<*n-1;l++) Rprintf("%lf, ",tempv[l]);
+            Rprintf("\n");
+            Rprintf("vstar=%lf \n",pow(vsqrtstar,2));
+            Rprintf("vstarrat=%lf \n",vsqrtstarrat);
+            for(l=0;l<*n;l++) Rprintf("lower = %lf \n",trilower[l]);
+            for(l=0;l<*n;l++) Rprintf("diag = %lf \n",tridiag[l]);
+            for(l=0;l<*n;l++) Rprintf("upper = %lf \n",triupper[l]);
+            Rprintf("tzVz=%lf \n",tzVz);
+            Rprintf("logdetratio=%lf \n",logdetratio);
+            Rprintf("expnum=%lf \n",expnum);
+            Rprintf("expden=%lf \n",expden);
+            Rprintf("mu[j]=%lf \n",mu[j]);
+            Rprintf("phi[j]=%lf \n",phi[j]);
+            Rprintf("diffchron[i]=%lf \n",diffchron[i]);
+            Rprintf("ig1=%lf \n",dlinvgauss2(pow(vsqrtstar,2),mu[j]*diffchron[i],phi[j]*diffchron[i]));
+            Rprintf("ig2=%lf \n",dlinvgauss2(v[i][j],mu[j]*diffchron[i],phi[j]*diffchron[i]));
+            Rprintf("igratio=%lf \n",igratio);
+            Rprintf("logRv=%lf \n",logRv);
+            error("Stop! \n");
+            }
 
         // Create some useful things for updating mu and phi
         sumv=0; sumxv=0;
@@ -312,6 +342,17 @@ R_FlushConsole();
 
 
 /*
+            
+error("Stopped here!");
+Rprintf("muval[1]=%lf \n",muval[0]);
+Rprintf("phival[1]=%lf \n",phival[0]);
+Rprintf("vstart[1]=%lf \n",vstart[0]);
+Rprintf("dlinvgauss2(vstart[1],mu[1],phi[1])=%lf \n",dlinvgauss2(vstart[0],muval[0],phival[0]));
+error("Stop! \n");
+for(i=0;i<*n;i++) Rprintf("currchron[i]=%lf \n",currchron[i]);
+for(i=0;i<*n-1;i++) Rprintf("diffchron[i]=%lf \n",diffchron[i]);
+
+
 double *temppro,*tempphi,*temptheta,*diffthetas,sigmasqnew,alphanew,deltanew,alpharat;
 int accept,countth=0,countsig=0,counta=0,countd=0,countchron=0;
 diffthetas = (double *)calloc(*m-1, sizeof(double));

@@ -23,10 +23,10 @@ The title for the plot
 Whether you wish to have the present on the left hand side (default) or on the right hand side
 }
   \item{denscol}{
-The colour of the 95% volatility ranges
+The colour of the 95\% volatility ranges
 }
   \item{denstransp}{
-The transparency (between 0 and 1) of the 95% volatility ranges
+The transparency (between 0 and 1) of the 95\% volatility ranges
 }
   \item{leg}{
 Whether to include a legend or not (default TRUE)

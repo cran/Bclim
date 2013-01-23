@@ -8,7 +8,7 @@ Bclim Markov chain Monte Carlo run
 A Bclim Markov chain Monte Carlo (MCMC) run to determine the volatilities and climate from a set of marginal data posteriors approximated as mixtures.
 }
 \usage{
-BclimMCMC(Bclimdata, chron.loc, nchron = 10000, control.mcmc = list(iterations = 1e+05, burnin = 20000, thinby = 40, report = 100), control.chains = list(v.mh.sd = 0.8, vstart = rinvgauss(Bclimdata$n, 2, 1), Kstart = rep(4, Bclimdata$n)), control.priors = list(eta = rep(2.66, Bclimdata$m), phi = rep(15.33, Bclimdata$m)))
+BclimMCMC(Bclimdata, chron.loc, nchron = 10000, control.mcmc = list(iterations = 1e+05, burnin = 20000, thinby = 40, report = 100), control.chains=list(v.mh.sd=0.8,vstart=rinvgauss(Bclimdata$n,2,1), Kstart=sample(1:Bclimdata$G,Bclimdata$n,replace=TRUE)), control.priors = list(eta = rep(2.66, Bclimdata$m), phi = rep(15.33, Bclimdata$m)))
 }
 \arguments{
   \item{Bclimdata}{
@@ -44,7 +44,7 @@ A list object wiht the following elements
   \item{nchron }{The number of chronologies in the chronology file}
 }
 \references{
-There will shortly be a reference to an Arxiv paper here
+See Arxiv paper at http://arxiv.org/abs/1206.5009.
 }
 \author{
 Andrew Parnell <andrew.parnell@ucd.ie>

@@ -1,3 +1,5 @@
 exportPattern("^[[:alpha:]]+")
 
 useDynLib(Bclim)
+
+export(Bclim, BclimLayer, BclimMixPar, BclimMixSer, BclimMCMC, BclimCompile, BclimInterp, plotBclim, plotBclimVol)

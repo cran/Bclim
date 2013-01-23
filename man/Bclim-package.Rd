@@ -12,9 +12,9 @@ This package takes pollen core and chronological data to produce palaeoclimate e
 \tabular{ll}{
 Package: \tab Bclim\cr
 Type: \tab Package\cr
-Version: \tab 2.1\cr
-Date: \tab 2012-06-19\cr
-License: \tab GPL >2 \cr
+Version: \tab 2.2\cr
+Date: \tab 2013-01-23\cr
+License: \tab GPL >=2 \cr
 }
 See the function \code{\link{BclimRun}} for a full description of the workings of the package and an example script for getting it to work.
 }
@@ -24,7 +24,7 @@ Andrew Parnell, Thinh Doan and James Sweeney
 Maintainer: Andrew Parnell <andrew.parnell@ucd.ie>
 }
 \references{
-There will shortly be a reference to an Arxiv paper here, see also references in \code{\link{BclimLayer}}
+See Arxiv paper at http://arxiv.org/abs/1206.5009, see also references in \code{\link{BclimLayer}}. The webpage http://mathsci.ucd.ie/~parnell_a/Bclim.html contains more detail and background information.
 }
 \keyword{ model }
 \keyword{ multivariate }
@@ -34,5 +34,5 @@ There will shortly be a reference to an Arxiv paper here, see also references in
 \code{\link{BclimRun}}, \code{\link{BclimLayer}}, \code{\link{BclimMixSer}}, \code{\link{BclimMixPar}}, \code{\link{BclimMCMC}}, \code{\link{BclimInterp}}, \code{\link{BclimCompile}}, \code{\link{plotBclim}}, \code{\link{plotBclimVol}}
 }
 \examples{
-## Not done yet!
+## See help for BclimMCMC and webpage at http://mathsci.ucd.ie/~parnell_a/Bclim.html
 }

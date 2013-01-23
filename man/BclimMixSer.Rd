@@ -37,7 +37,7 @@ Outputs a list containing the following objects:
   \item{p.mat }{An estimate of the Gaussian mixture proportions} 
 }
 \references{
-There will shortly be a reference to an Arxiv paper here
+See Arxiv paper at http://arxiv.org/abs/1206.5009.
 }
 \author{
 Andrew Parnell <andrew.parnell@ucd.ie>

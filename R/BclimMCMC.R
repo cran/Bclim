@@ -1,5 +1,5 @@
 BclimMCMC <-
-function(Bclimdata,chron.loc,nchron=10000,control.mcmc=list(iterations=100000,burnin=20000,thinby=40,report=100),control.chains=list(v.mh.sd=0.8,vstart=rinvgauss(Bclimdata$n,2,1),Kstart=rep(4,Bclimdata$n)),control.priors=list(eta=rep(2.66,Bclimdata$m),phi=rep(15.33,Bclimdata$m))) {
+function(Bclimdata,chron.loc,nchron=10000,control.mcmc=list(iterations=100000,burnin=20000,thinby=40,report=100),control.chains=list(v.mh.sd=0.8,vstart=rinvgauss(Bclimdata$n,2,1),Kstart=sample(1:Bclimdata$G,Bclimdata$n,replace=TRUE)),control.priors=list(eta=rep(2.66,Bclimdata$m),phi=rep(15.33,Bclimdata$m))) {
 
 # Create output matrices
 remaining <- (control.mcmc$iterations-control.mcmc$burnin)/control.mcmc$thinby
@@ -12,8 +12,8 @@ cout <- rep(0,length=Bclimdata$m*(Bclimdata$n)*remaining)
 # Re-dim the precisions matrix
 Bclimprec <- Bclimdata$tau.mat[,1,]
 
-#cat("\n")
-#cat("Running MCMC...\n")
+cat("\n")
+cat("Running MCMC...\n")
 
 # Run C code
 out <- .C("BclimMCMC3D", 
@@ -36,8 +36,8 @@ out <- .C("BclimMCMC3D",
         as.double(control.priors$phi),
         as.double(vout),
         as.double(chronout),
-        as.double(cout)
-        ,PACKAGE="Bclim")
+        as.double(cout))
+          #,PACKAGE="Bclim")
 
 vout  <- array(NA,dim=c(remaining,Bclimdata$n-1,Bclimdata$m))
 cout  <- array(NA,dim=c(remaining,Bclimdata$n,Bclimdata$m))
