@@ -7,7 +7,8 @@ Run all stages of Bclim together
 This function is intended for beggining/light users of Bclim who wish to create palaeoclimate reconstructions from their own pollen data. It collects together the functions \code{\link{BclimLayer}}, \code{\link{BclimMixSer}}, \code{\link{BclimMCMC}}, \code{\link{BclimInterp}} and \code{\link{BclimCompile}}.
 }
 \usage{
-BclimRun(pollen.loc, chron.loc, core.name = "Core", time.grid = seq(0, 14, length = 100), required.data3D = NULL, nchrons = 10000, parallel = FALSE, save.as.you.go = TRUE)
+BclimRun(pollen.loc, chron.loc, core.name = "Core", time.grid = seq(0, 14, length = 100), 
+  required.data3D = NULL, nchrons = 10000, parallel = FALSE, save.as.you.go = TRUE)
 }
 \arguments{
   \item{pollen.loc}{
@@ -90,7 +91,8 @@ chron.loc <- paste(getwd(),'/Slugganchrons.txt',sep='')
 load('required.data3D.RData')
 
 # Now run Bclim the simple way
-RunSluggan <- BclimRun(pollen.loc,chron.loc,core.name="Sluggan Moss",time.grid=seq(0,14,length=100),nchrons=10000,required.data3D=required.data3D,parallel=FALSE)
+RunSluggan <- BclimRun(pollen.loc,chron.loc,core.name="Sluggan Moss",time.grid=seq(0,14,length=100),
+  nchrons=10000,required.data3D=required.data3D,parallel=FALSE)
 
 # Create some plots of climate
 plotBclim(RunSluggan,dim=1)

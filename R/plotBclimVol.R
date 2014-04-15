@@ -1,13 +1,12 @@
 plotBclimVol <-
-function(x,dim=1,title=NULL,presentleft=TRUE,denscol="red",denstransp=0.5,leg=TRUE,dolog10=FALSE,med=FALSE,legloc="topleft",...) {
-  #dim=1;title=NULL;presentleft=TRUE;denscol="red";denstransp=0.5;leg=TRUE;legloc="topleft"
+function(x,dim=1,title=NULL,presentleft=TRUE,denscol="red",denstransp=0.5,leg=TRUE,mean=TRUE,legloc="topleft",...) {
   
   if(class(x)!="Bclim") stop("Needs a Bclim output object")
   
   # Create HDRs for volatility
   errorbar <- matrix(NA,nrow=length(x$time.grid)-1,ncol=3)
-  if(dolog10) for(i in 1:(length(x$time.grid)-1)) errorbar[i,] <- quantile(log10(abs(x$vol.interp[,i,dim]*sqrt(x$ScVar[dim]))),probs=c(0.025,0.5,0.975))    
-  if(!dolog10) for(i in 1:(length(x$time.grid)-1)) errorbar[i,] <- quantile(abs(x$vol.interp[,i,dim]*sqrt(x$ScVar[dim])),probs=c(0.025,0.5,0.975))
+  for(i in 1:(length(x$time.grid)-1)) errorbar[i,] <- quantile(x$v.interp[,i,dim],probs=c(0.025,0.5,0.975))
+  for(i in 1:(length(x$time.grid)-1)) errorbar[i,2] <- mean(x$v.interp[,i,dim])
   
   # Sort out colours
   tmp <- col2rgb(denscol)
@@ -21,20 +20,35 @@ function(x,dim=1,title=NULL,presentleft=TRUE,denscol="red",denstransp=0.5,leg=TR
   yrange <- range(c(0,as.vector(errorbar)))
   mytitle <- title
   if(is.null(title)) mytitle <- paste(x$core.name,": ",x$clim.dims[dim],sep="")
-  plot(1,1,type="n",xlim=xrange,ylim=yrange,xlab="Age (k cal years BP)",ylab=paste(x$clim.dims[dim],ifelse(dolog10,"log10 volatility","volatility")),las=1,bty="n",main=mytitle)
+  
+  if(dim==1) {
+    plot(1,1,type="n",xlim=xrange,ylim=yrange,xaxt='n',xlab="Age (k cal years BP)",ylab=expression(paste("GDD5 volatility (",degree,"C days)",sep="")),las=1,bty="n",main=mytitle)
+  }
+  if(dim==2) {
+    plot(1,1,type="n",xlim=xrange,ylim=yrange,xaxt='n',xlab="Age (k cal years BP)",ylab=expression(paste("MTCO volatility (",degree,"C)",sep="")),las=1,bty="n",main=mytitle)
+  }
+  if(dim==3) {
+    plot(1,1,type="n",xlim=xrange,ylim=yrange,xaxt='n',xlab="Age (k cal years BP)",ylab=x$clim.dims[dim],las=1,bty="n",main=mytitle)
+  }
+  
+  axis(side=1,at=pretty(x$time.grid,n=10))
   rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col="lightgray",border="NA")
   grid(col="white")  
   
   # Draw lines    
-  #lines(x$time.grid[-1],errorbar[,1],col="red")
-  #lines(x$time.grid[-1],errorbar[,2],col="blue")
-  #lines(x$time.grid[-1],errorbar[,3],col="green")
-  polygon(c(x$time.grid[-1],rev(x$time.grid[-1])),c(errorbar[,1],rev(errorbar[,3])),col=mycol2,border=mycol2)
-  if(med) lines(x$time.grid[-1],apply(errorbar,1,"median"),col=denscol)
+  tgridshift = x$time.grid[-1]-c(diff(x$time.grid)/2)
+  lines(c(min(x$time.grid),max(x$time.grid)),c(min(yrange),min(yrange)))
+  for(i in 1:length(x$time.grid[-1])) {
+    lines(c(tgridshift[i],tgridshift[i]),c(errorbar[i,1],errorbar[i,3]),col=denscol)
+    if(mean) points(tgridshift[i],errorbar[i,2],col=denscol)
+  }
+  for(i in 1:length(x$time.grid)) lines(c(x$time.grid[i],x$time.grid[i]),c(min(yrange),0.05*max(yrange)))
   
   # Finally draw a legend
   if(leg==TRUE) {
-    legend(legloc,legend=c("95% credibility interval"),fill=c(denscol),bty="n")
+    if(!mean) legend(legloc,legend=c("95% credibility interval",'Time Interval'),lty=c(1,1),col=c(mycol2,'black'),pch=c(-1,-1),bty="n")
+    if(mean) legend(legloc,legend=c("95% credibility interval","Mean",'Time Interval'),lty=c(1,-1,1),col=c(mycol2,denscol,'black'),pch=c(-1,1,-1),bty="n")
+    #fill=c(denscol,NULL)
   }
     
 # End of function   

@@ -64,8 +64,10 @@ load('required.data3D.RData')
 
 ## note that all of these functions have further options you can change with
 step1 <- BclimLayer(pollen.loc,required.data3D=required.data3D)
-step2 <- BclimMixSer(step1) # See also the parallelised version BclimMixPar if you have doMC and foreach installed
-step3 <- BclimMCMC(step2,chron.loc) # You should probably do some convergence checking after this step
+step2 <- BclimMixSer(step1) 
+# See also the parallelised version BclimMixPar if you have doMC and foreach installed
+step3 <- BclimMCMC(step2,chron.loc) 
+# You should probably do some convergence checking after this step
 step4 <- BclimInterp(step2,step3) 
 results <- BclimCompile(step1,step2,step3,step4,core.name="Sluggan Moss")
 

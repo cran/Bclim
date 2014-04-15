@@ -12,8 +12,8 @@ This package takes pollen core and chronological data to produce palaeoclimate e
 \tabular{ll}{
 Package: \tab Bclim\cr
 Type: \tab Package\cr
-Version: \tab 2.2\cr
-Date: \tab 2013-01-23\cr
+Version: \tab 2.3.1\cr
+Date: \tab 2013-07-29\cr
 License: \tab GPL >=2 \cr
 }
 See the function \code{\link{BclimRun}} for a full description of the workings of the package and an example script for getting it to work.

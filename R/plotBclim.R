@@ -1,17 +1,26 @@
 plotBclim <-
 function(x,dim=1,title=NULL,presentleft=TRUE,blob=TRUE,MDPcol="blue",denscol="red",MDPtransp=0.1,denstransp=0.5,leg=TRUE,legloc="topleft",...) {
-  #dim=2;title=NULL;presentleft=TRUE;blob=TRUE;MDPcol="blue";denscol="red";MDPtransp=0.1;denstransp=0.5;leg=TRUE;legloc="topleft"
   
-    if(class(x)!="Bclim") stop("Needs a Bclim output object")  
-    # Set up plot 
-    par(mar=c(4,4,3,1))
-    xrange <- range(c(0,x$time.grid))
-    if(!presentleft) xrange <- rev(xrange)
-    yrange <- range(c(0,x$MDP[,,dim]))
-    mytitle <- title
-    if(is.null(title)) mytitle <- paste(x$core.name,": ",x$clim.dims[dim],sep="")
-    plot(1,1,type="n",xlim=xrange,ylim=yrange,xlab="Age (k cal years BP)",ylab=x$clim.dims[dim],las=1,bty="n",main=mytitle)
-    #plot(1,1,type="n",xlim=xrange,ylim=yrange,xlab="Age (thousands of years before present)",ylab=x$clim.dims[dim],las=1,bty="n",main=mytitle)
+  if(class(x)!="Bclim") stop("Needs a Bclim output object")  
+  # Set up plot 
+  par(mar=c(4,4,3,1))
+  xrange <- range(c(0,x$time.grid))
+  if(!presentleft) xrange <- rev(xrange)
+  yrange <- range(c(0,x$MDP[,,dim]))
+  mytitle <- title
+  if(is.null(title)) mytitle <- paste(x$core.name,": ",x$clim.dims[dim],sep="")
+  
+  if(dim==1) {
+    plot(1,1,type="n",xlim=xrange,ylim=yrange,xlab="Age (k cal years BP)",ylab=expression(paste("GDD5 (",degree,"C days)",sep="")),las=1,bty="n",main=mytitle,xaxt='n')
+  }
+  if(dim==2) {
+    plot(1,1,type="n",xlim=xrange,ylim=yrange,xlab="Age (k cal years BP)",ylab=expression(paste("MTCO (",degree,"C)",sep="")),las=1,bty="n",main=mytitle,xaxt='n')    
+  }
+  if(dim==3) {
+    plot(1,1,type="n",xlim=xrange,ylim=yrange,xlab="Age (k cal years BP)",ylab=x$clim.dims[3],las=1,bty="n",main=mytitle,xaxt='n')
+  }
+
+    axis(side=1,at=pretty(x$time.grid,n=10))
     rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col="lightgray",border="NA")
     grid(col="white")
     
@@ -34,7 +43,7 @@ function(x,dim=1,title=NULL,presentleft=TRUE,blob=TRUE,MDPcol="blue",denscol="re
         chrontemp <- chron[1:num,i]
           
         if(var(chrontemp)>0) {
-          tmp <- kde2d(chrontemp,MDPtemp)
+          tmp <- MASS::kde2d(chrontemp,MDPtemp)
           
           # Standardise and find 95% limit
           z <- tmp$z/sum(tmp$z)
@@ -61,7 +70,7 @@ function(x,dim=1,title=NULL,presentleft=TRUE,blob=TRUE,MDPcol="blue",denscol="re
     HDR50 <- matrix(NA,nrow=length(x$time.grid),ncol=50)
     for(i in 1:length(x$time.grid)) {
         if(sd(x$clim.interp[,i,dim])>0) {
-          TempHDR <- hdr(x$clim.interp[,i,dim],h=bw.nrd0(x$clim.interp[,i,dim]),prob=c(1,50,75,95))$hdr
+          TempHDR <- hdrcde::hdr(x$clim.interp[,i,dim],h=bw.nrd0(x$clim.interp[,i,dim]),prob=c(1,50,75,95))$hdr
           
           Temp95 <- TempHDR[1,!is.na(TempHDR[1,])]
           HDR95[i,1:length(Temp95)] <- Temp95
@@ -101,7 +110,7 @@ function(x,dim=1,title=NULL,presentleft=TRUE,blob=TRUE,MDPcol="blue",denscol="re
             lines(c(x$time.grid[i],x$time.grid[i]),c(HDR75[i,2*j-1],HDR75[i,2*j]),col="blue",lwd=2)
           }
           for(j in 1:(ncol(HDR50)/2)) {
-            lines(c(x$time.grid[i],x$time.grid),c(HDR50[i,2*j-1],HDR50[i,2*j]),col="blue",lwd=3)
+            lines(c(x$time.grid[i],x$time.grid[i]),c(HDR50[i,2*j-1],HDR50[i,2*j]),col="blue",lwd=3)
           }
         }
     }

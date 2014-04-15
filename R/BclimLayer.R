@@ -49,6 +49,5 @@ function(pollen.loc,required.data3D,nsamples=1000){
 	#naming dimensions
 	dimnames(samples)=list(NULL,NULL,c("GDD5","MTCO","AET/PET"))
 
-	#return(list(Posteriors=post,samples=samples,nslices=nslices,nsamples=nsamples))
   return(samples)
 }

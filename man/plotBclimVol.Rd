@@ -7,7 +7,8 @@ Plotting of interpolated climate volatilities
 This function plots volatilities over time for the selected climate dimension after a Bclim run.
 }
 \usage{
-plotBclimVol(x, dim = 1, title = NULL, presentleft = TRUE, denscol = "red", denstransp = 0.5, leg = TRUE, dolog10 = FALSE, med = FALSE, legloc = "topleft", ...)
+plotBclimVol(x, dim = 1, title = NULL, presentleft = TRUE, denscol = "red", 
+  denstransp = 0.5, leg = TRUE, mean = TRUE, legloc = "topleft", ...)
 }
 \arguments{
   \item{x}{
@@ -31,11 +32,8 @@ The transparency (between 0 and 1) of the 95\% volatility ranges
   \item{leg}{
 Whether to include a legend or not (default TRUE)
 }
-  \item{dolog10}{
-Whether to plot the log of the volatilities instead
-}
-  \item{med}{
-Whether to include a line indicating the median volatility
+  \item{mean}{
+Whether to include a line indicating the mean volatility
 }
   \item{legloc}{
 Where to place the legend (e.g. 'topleft', 'bottomright', etc)

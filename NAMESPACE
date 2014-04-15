@@ -2,4 +2,7 @@ exportPattern("^[[:alpha:]]+")
 
 useDynLib(Bclim)
 
-export(Bclim, BclimLayer, BclimMixPar, BclimMixSer, BclimMCMC, BclimCompile, BclimInterp, plotBclim, plotBclimVol)
+import(MASS)
+import(mclust)
+importFrom(statmod,rinvgauss)
+importFrom(hdrcde,hdr)

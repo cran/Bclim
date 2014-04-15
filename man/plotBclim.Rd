@@ -7,7 +7,8 @@ Plots of posterior Bclim climate histories
 Create plots of climate histories from a Bclim run
 }
 \usage{
-plotBclim(x, dim = 1, title = NULL, presentleft = TRUE, blob = TRUE, MDPcol = "blue", denscol = "red", MDPtransp = 0.1, denstransp = 0.5, leg = TRUE, legloc = "topleft", ...)
+plotBclim(x, dim = 1, title = NULL, presentleft = TRUE, blob = TRUE, MDPcol = "blue", 
+  denscol = "red", MDPtransp = 0.1, denstransp = 0.5, leg = TRUE, legloc = "topleft", ...)
 }
 \arguments{
   \item{x}{

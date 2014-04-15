@@ -366,6 +366,7 @@ free(B);
 return 2.0*sum;
 
 }
+
 double dlognormal(double *x, double *mean, double **var,int len)
 {
 
@@ -375,14 +376,12 @@ double dens,logdeter,**invvar,bigsum=0.0;
 int i,j;
 
 invvar = (double **)calloc(len, sizeof(double *));
-for (i=0;i<len;i++) {
-    invvar[i] = (double *)calloc(len, sizeof(double));
-}
+for (i=0;i<len;i++) invvar[i] = (double *)calloc(len, sizeof(double));
 if(invvar==NULL) error("Can't allocate memory");
 
 for(i=0;i<len;i++) invvar[i][i] = 1.0;
 for(i=0;i<len;i++) {
-	for(j=0;j<j;j++) {
+	for(j=0;j<len;j++) {
 		invvar[i][j] = 1.0;
 		invvar[j][i] = 1.0;
 	}
@@ -504,6 +503,8 @@ void trisolve (int n, double *a, double *b, double *c, double *v, double *x)
     double *b2,*v2;
     b2 = (double *)calloc(n, sizeof(double));
     v2 = (double *)calloc(n, sizeof(double));
+    if(b2==NULL) error("Can't allocate memory");
+    if(v2==NULL) error("Can't allocate memory");
     for(i=0;i<n;i++) {
         b2[i] = b[i];
         v2[i] = v[i];
@@ -523,7 +524,6 @@ void trisolve (int n, double *a, double *b, double *c, double *v, double *x)
         
     free(b2);
     free(v2);
-    
 }
 
 void maketri(double *v, int n, double *D, double*upp,double *dia, double *low) {
@@ -590,13 +590,32 @@ void CholTriDiag(double *alpha, double *beta, int n, double *delta, double *l) {
 // delta and l are the diagonals and off-diagonals of the output matrix respectively
     int i;
     delta[0] = alpha[0];
-    l[0] = beta[0]/delta[0];
+    l[0] = beta[0]/sqrt(delta[0]);
     for(i=1;i<n-1;i++) {
         delta[i] = alpha[i]-pow(beta[i-1],2)/delta[i-1];
-        l[i] = beta[i]/delta[i];
+        l[i] = beta[i]/sqrt(delta[i]);
     }
     delta[n-1] = alpha[n-1]-pow(beta[n-2],2)/delta[n-2];
     for(i=0;i<n;i++) delta[i] = sqrt(delta[i]);
 }
-    
+
+double logdetTriDiag(double *diag, double *upper, double *lower, int n) {
+// Function to calculate the determinant for a tri-diagonal matrix
+// Idea taken from http://en.wikipedia.org/wiki/Tridiagonal_matrix
+// diag is the diagonal, upper is the upper diagonal, lower is the lower
+    int i;
+    double *f,logdet;
+    f = (double *)calloc(n, sizeof(double));
+    if(f==NULL) error("Can't allocate memory");
+    f[0] = 1;
+    f[1] = diag[0];
+    for(i=2;i<n;i++) {
+        f[i] = diag[i-1]*f[i-1]-lower[i-2]*upper[i-2]*f[i-2];
+    }
+    logdet = log(diag[n-1]*f[n-1]-lower[n-2]*upper[n-2]*f[n-2]);
+    free(f);
+    return(logdet);
+}
+
+
     

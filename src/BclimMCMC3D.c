@@ -17,7 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-void BclimMCMC3D(int *G,int *n, int *m,int *nchrons, double *MixPro, double *MixMeans, double *MixPrec, char **ChronsFILE, int *iterations, int *burnin, int *thinby, int *reportevery, double *vmhsd, double *vstart, int *Kstart, double *muval, double *phival, double *vstore, double *chronstore, double *cstore)
+void BclimMCMC3D(int *G,int *n, int *m,int *nchrons, double *MixPro, double *MixMeans, double *MixPrec, char **ChronsFILE, int *iterations, int *burnin, int *thinby, int *reportevery, double *vmhsd, double *vstart, int *Zstart, double *phi1start, double *phi2start, double *vstore, int *zstore, double *chronstore, double *cstore, double *phi1store, double *phi2store, double *phi1dlmean, double *phi1dlsd, double *phi2dlmean, double *phi2dlsd, double *phi1mhsd, double *phi2mhsd)
 {
 
 // G is number of mixture groups, n is number of layers, m is number of climate dimensions (always 3 here), nchrons is number of chronologies
@@ -25,10 +25,10 @@ void BclimMCMC3D(int *G,int *n, int *m,int *nchrons, double *MixPro, double *Mix
 // ChronsFILE is the path to the chronologies file
 // iterations is number of iterations, burnin is size of burnin, thinby is thinning amount, reportevery is how often to report
 // vmhsd is the standard deviation of the truncated random walk for proposing new values of v
-// vstart and Kstart are starting values for v and K respectively
-// mu and phi are 3-vectors of the values used for mu and phi
+// vstart and Zstart are starting values for v and Z respectively
+// phi1 and phi2 are 3-vectors of the values used for phi1 and phi2
 // vstore is variance output, chronstore are used chronologies, cstore is used for climates
-    
+
 // Declare indicators
 int i,j,k,l,j2,j3,iter;
 	
@@ -65,13 +65,14 @@ for(i=0;i<*n;i++) {
 for(i=0;i<*n;i++) for(j=0;j<*G;j++) MyMixPro[i][j] = MixPro[j*(*n)+i];
 
 // Set up matrices
-double **v,*mu,*phi,*mixpro,*choldiag,*chollower,*rannormal,*cholzeros,*mvnvar;
-int *K,*mixseq;
+double **v,*phi1,*phi2,*mixpro,*choldiag,*chollower,*rannormal,*cholzeros,*mvnvar;
+int *Z,*Zstar,*mixseq;
 v = (double **)calloc(*n-1, sizeof(double *));
 for(i=0;i<*n-1;i++) v[i] = (double *)calloc(*m, sizeof(double));
-mu = (double *)calloc(*m, sizeof(double));
-phi = (double *)calloc(*m, sizeof(double));
-K = (int *)calloc(*n, sizeof(int));
+phi1 = (double *)calloc(*m, sizeof(double));
+phi2 = (double *)calloc(*m, sizeof(double));
+Z = (int *)calloc(*n, sizeof(int));
+Zstar = (int *)calloc(*n, sizeof(int));
 mixpro = (double *)calloc(*G, sizeof(double));
 for(i=0;i<*G;i++) mixpro[i]=1/((double)*G);
 mixseq = (int *)calloc(*G, sizeof(int));
@@ -83,9 +84,10 @@ cholzeros = (double *)calloc(*n, sizeof(double));
 mvnvar = (double *)calloc(*n, sizeof(double));
 
 if(v==NULL) error("Can't allocate memory");
-if(mu==NULL) error("Can't allocate memory");
-if(phi==NULL) error("Can't allocate memory");
-if(K==NULL) error("Can't allocate memory");
+if(phi1==NULL) error("Can't allocate memory");
+if(phi2==NULL) error("Can't allocate memory");
+if(Z==NULL) error("Can't allocate memory");
+if(Zstar==NULL) error("Can't allocate memory");
 if(mixseq==NULL) error("Can't allocate memory");
 if(choldiag==NULL) error("Can't allocate memory");
 if(chollower==NULL) error("Can't allocate memory");
@@ -95,29 +97,40 @@ if(mvnvar==NULL) error("Can't allocate memory");
 
 // Give starting values
 for(i=0;i<*n-1;i++) for(j=0;j<*m;j++) v[i][j] =  vstart[i];
-for(i=0;i<*m;i++) mu[i] = muval[i];
-for(i=0;i<*m;i++) phi[i] = phival[i];
-for(i=0;i<*n;i++) K[i] = Kstart[i]-1;    
+for(i=0;i<*m;i++) phi1[i] = phi1start[i];
+for(i=0;i<*m;i++) phi2[i] = phi2start[i];
+for(i=0;i<*n;i++) Z[i] = Zstart[i]-1;
 
 // Set up the matrices I'll need;
-double *mujk,*Djk,*VDmu,*Vz,*mujkstar,*Djkstar,*VDmustar,*Dmu,*Dmustar;
-mujk = (double *)calloc(*n, sizeof(double));
-Djk = (double *)calloc(*n, sizeof(double));
-VDmu = (double *)calloc(*n, sizeof(double));
-Vz = (double *)calloc(*n, sizeof(double));
-mujkstar = (double *)calloc(*n, sizeof(double));
-Djkstar = (double *)calloc(*n, sizeof(double));
-VDmustar = (double *)calloc(*n, sizeof(double));
-Dmu = (double *)calloc(*n, sizeof(double));
-Dmustar = (double *)calloc(*n, sizeof(double));
+double **M, **R, **DM, **Mstar, **Rstar, **DMstar;
+M = (double **)calloc(*n, sizeof(double *));
+for(i=0;i<*n;i++) M[i] = (double *)calloc(*m, sizeof(double)); // n rows, m columns - hopefully!
+R = (double **)calloc(*n, sizeof(double *));
+for(i=0;i<*n;i++) R[i] = (double *)calloc(*m, sizeof(double));
+DM = (double **)calloc(*n, sizeof(double *));
+for(i=0;i<*n;i++) DM[i] = (double *)calloc(*m, sizeof(double));
+Mstar = (double **)calloc(*n, sizeof(double *));
+for(i=0;i<*n;i++) Mstar[i] = (double *)calloc(*m, sizeof(double));
+Rstar = (double **)calloc(*n, sizeof(double *));
+for(i=0;i<*n;i++) Rstar[i] = (double *)calloc(*m, sizeof(double));
+DMstar = (double **)calloc(*n, sizeof(double *));
+for(i=0;i<*n;i++) DMstar[i] = (double *)calloc(*m, sizeof(double));
 
-if(mujk==NULL) error("Can't allocate memory");
-if(Djk==NULL) error("Can't allocate memory");
-if(VDmu==NULL) error("Can't allocate memory");
-if(Vz==NULL) error("Can't allocate memory");
-if(mujkstar==NULL) error("Can't allocate memory");
-if(Djkstar==NULL) error("Can't allocate memory");
-if(VDmustar==NULL) error("Can't allocate memory");
+// Some final vectors I need
+double *MDR,*MDM,*MDRstar,*MDMstar,*D,*Wupper,*Wdiag;
+D = (double *)calloc(*n, sizeof(double));
+MDR = (double *)calloc(*m, sizeof(double));
+MDM = (double *)calloc(*m, sizeof(double));
+MDRstar = (double *)calloc(*m, sizeof(double));
+MDMstar = (double *)calloc(*m, sizeof(double));
+
+if(M==NULL) error("Can't allocate memory");
+if(D==NULL) error("Can't allocate memory");
+if(R==NULL) error("Can't allocate memory");
+if(DM==NULL) error("Can't allocate memory");
+if(Mstar==NULL) error("Can't allocate memory");
+if(Rstar==NULL) error("Can't allocate memory");
+if(DMstar==NULL) error("Can't allocate memory");
 
 // Set up somewhere to store output
 double **allchrons;
@@ -143,27 +156,57 @@ currchron = (double *)calloc(*n, sizeof(double));
 if(diffchron==NULL) error("Can't allocate memory");
 if(currchron==NULL) error("Can't allocate memory");
 
+// Proposal vector for Z;
+double *eqprob;
+eqprob = (double *)calloc(*G, sizeof(double));
+for(k=0;k<*G;k++) eqprob[k] = (double)1 / *G;
+
 // Set up MCMC variables I'll need
-double *triupper,*tridiag,*trilower,vsqrtstar,vsqrtstarrat,temp,*z,tzVz,logdetratio,expnum,expden,igratio,logRv,*ones,*Vone,oneVone,exp1bit,exp2bit,*tempv,u1,u2,u3,sumv,sumxv,*tempc;
-int accept,countchron=0,countv=0,countmu=0,countphi=0,currentpos,countK=0,countc=0;
+double *tempv,*tempDM,*tempR,*tempDMstar,*tempRstar,*tempvstar,*triupper,*tridiag,*trilower,*logdetratio,vstar,vstarrat,logRv,logRz,*tempc,phi1star,phi2star,phi1starrat,phi2starrat,logRphi1,logRphi2,*B,*S,tBS;
+tempv = (double *)calloc(*n-1, sizeof(double));
+tempvstar = (double *)calloc(*n-1, sizeof(double));
+tempDM = (double *)calloc(*n, sizeof(double));
+tempR = (double *)calloc(*n, sizeof(double));
+tempDMstar = (double *)calloc(*n, sizeof(double));
+tempRstar = (double *)calloc(*n, sizeof(double));
+logdetratio = (double *)calloc(*m, sizeof(double));
 triupper = (double *)calloc(*n, sizeof(double));
 tridiag = (double *)calloc(*n, sizeof(double));
 trilower = (double *)calloc(*n, sizeof(double));
-tempv = (double *)calloc(*n-1, sizeof(double));
-z = (double *)calloc(*n, sizeof(double));
-ones = (double *)calloc(*n, sizeof(double));
-Vone = (double *)calloc(*n, sizeof(double));
 tempc = (double *)calloc(*n, sizeof(double));
+B = (double *)calloc(*n, sizeof(double));
+S = (double *)calloc(*n, sizeof(double));
+int accept,countchron=0,countv=0,countz=0,currentpos,countc=0,countphi1=0,countphi2=0;
 
 // Start off the chronologies
 for(i=0;i<*n;i++) currchron[i] = allchrons[0][i];
 diff(currchron,n,diffchron);
 
+// Create the matrices I need later
+for(j=0;j<*m;j++) {
+    // Create M,D and DM and MDM, etc
+    MDM[j] = 0;
+    MDMstar[j] = 0;
+    for(i=0;i<*n;i++) {
+        M[i][j] =  MyMixMean[i][j][Z[i]];
+        D[i] = MyMixPrec[i][Z[i]];
+        DM[i][j] = D[i]*M[i][j];
+        Mstar[i][j] =  MyMixMean[i][j][Z[i]];
+        DMstar[i][j] = D[i]*M[i][j];
+        MDM[j] += M[i][j]*DM[i][j];
+        MDMstar[j] += M[i][j]*DM[i][j];
+     }
+}
+
 // Start iterations loop
 double progress=0;
 for(iter=0;iter<*iterations;iter++) {
-//for(i=0;i<1;i++) {
 
+
+	// Check if someone's pressed escape
+	R_CheckUserInterrupt();
+
+    // Report progress
 	if(iter%*reportevery==0) {
 	    progress = (double) 100*iter/ *iterations;
         Rprintf("\r");
@@ -172,160 +215,206 @@ for(iter=0;iter<*iterations;iter++) {
 	    Rprintf("\r");
 	    R_FlushConsole();
 	}
-
-	// Check if someone's pressed escape
-	R_CheckUserInterrupt();
-
-    // Loop through climate dimensions;
-    for(j=0;j<*m;j++) {
     
-        // Create mujk,Djk and VDmu
-        for(i=0;i<*n;i++) {
-            mujk[i] =  MyMixMean[i][j][K[i]];
-            Djk[i] = MyMixPrec[i][K[i]];
-            Dmu[i] = Djk[i]*mujk[i];
-            //Rprintf("%lf %i \n",Djk[i],K[i]-1);
-            //Rprintf("%lf \n",Djk[i]);
-        }
-
-
-        for(l=0;l<*n-1;l++) tempv[l] = v[l][j];
-        //for(l=0;l<*n;l++) Rprintf("tempv=%lf \n",tempv[l]);
-        //for(l=0;l<*n;l++) Rprintf("Djk=%lf \n",Djk[l]);
-        maketri(tempv,*n,Djk,triupper,tridiag,trilower);       
-        trisolve (*n, trilower,tridiag, triupper, Dmu, VDmu);
-
-        // Sample a new v       
-        for(i=0;i<*n-1;i++) {
-            
-            vsqrtstar = truncatedwalk(sqrt(v[i][j]), *vmhsd, 0, LARGE);
-            vsqrtstarrat = truncatedrat(sqrt(v[i][j]), *vmhsd, 0, LARGE, vsqrtstar);
-            
-            for(l=0;l<*n;l++) z[l] = 0.0;
-            z[i] = 1.0;
-            z[i+1] = -1.0;
-            trisolve (*n, trilower,tridiag, triupper, z, Vz); 
-            tzVz = Vz[i]-Vz[i+1];
-            
-            logdetratio = -0.5*log(1+(1/pow(vsqrtstar,2)-1/v[i][j])*tzVz);
-            expnum = -pow(VDmu[i]-VDmu[i+1],2);
-            expden = 2*((1/(1/pow(vsqrtstar,2)-1/v[i][j]))+tzVz);
-            igratio = dlinvgauss2(pow(vsqrtstar,2),mu[j]*diffchron[i],phi[j]*diffchron[i])-dlinvgauss2(v[i][j],mu[j]*diffchron[i],phi[j]*diffchron[i]);
-            logRv = logdetratio + expnum/expden + igratio + 0.5*(log(v[i][j])-log(pow(vsqrtstar,2)));            
-            
-            accept = (int)UpdateMCMC(logRv,1,0,vsqrtstarrat);
-      			if(accept==1) {
-                v[i][j] = pow(vsqrtstar,2);
-                for(l=0;l<*n-1;l++) tempv[l] = v[l][j];
-                maketri(tempv,*n,Djk,triupper,tridiag,trilower);       
-                trisolve (*n, trilower,tridiag, triupper, Dmu, VDmu);
-            }
-
- 
-        } // End of i loop for v update
-/*
-
-if(i==2) {
-            Rprintf("i=%i \n",i+1);
-            Rprintf("v=");
-            for(l=0;l<*n-1;l++) Rprintf("%lf, ",tempv[l]);
-            Rprintf("\n");
-            Rprintf("vstar=%lf \n",pow(vsqrtstar,2));
-            Rprintf("vstarrat=%lf \n",vsqrtstarrat);
-            for(l=0;l<*n;l++) Rprintf("lower = %lf \n",trilower[l]);
-            for(l=0;l<*n;l++) Rprintf("diag = %lf \n",tridiag[l]);
-            for(l=0;l<*n;l++) Rprintf("upper = %lf \n",triupper[l]);
-            Rprintf("tzVz=%lf \n",tzVz);
-            Rprintf("logdetratio=%lf \n",logdetratio);
-            Rprintf("expnum=%lf \n",expnum);
-            Rprintf("expden=%lf \n",expden);
-            Rprintf("mu[j]=%lf \n",mu[j]);
-            Rprintf("phi[j]=%lf \n",phi[j]);
-            Rprintf("diffchron[i]=%lf \n",diffchron[i]);
-            Rprintf("ig1=%lf \n",dlinvgauss2(pow(vsqrtstar,2),mu[j]*diffchron[i],phi[j]*diffchron[i]));
-            Rprintf("ig2=%lf \n",dlinvgauss2(v[i][j],mu[j]*diffchron[i],phi[j]*diffchron[i]));
-            Rprintf("igratio=%lf \n",igratio);
-            Rprintf("logRv=%lf \n",logRv);
-            error("Stop! \n");
-            }
-
-        // Create some useful things for updating mu and phi
-        sumv=0; sumxv=0;
-        for(i=0;i<(*n-1);i++) {
-            sumv += v[i][j];
-            sumxv += pow(diffchron[i],2)/v[i][j];
-        }
+    // Store stuff
+    if((iter%*thinby==0) & (iter>=*burnin)) {
         
-        u1 = sumv;
-        u2 = diffchron[*n-1]-diffchron[0]-*phipar2;
-        u3 = sumxv;
-         
-        // Update mu
-        mustar = truncatedwalk(mu[j], *mumhsd, 0, LARGE);
-        mustarrat = truncatedrat(mu[j], *mumhsd, 0, LARGE, mustar);
-        logRmu = ((((double)*n-1)/2)+*mupar1-1)*(log(mustar)-log(mu[j]))-0.5*(phi[j]*u1*(1/mustar-1/mu[j]))-0.5*(phi[j]*u3+2*(*mupar2))*(mustar-mu[j]); 
-        mu[j] = UpdateMCMC(logRmu,mustar,mu[j],mustarrat);
-
-        // Update phi
-        //phi[j] = rgamma(((double)*n-1)/2+*phipar1,1/(u1/(2*mu[j])-u2+u3*mu[j]/2));
-*/        
-    } // End of j loop updating v mu and phi
-
-	// Store everything
-	if((iter%*thinby==0) & (iter>=*burnin)) {
-        
-
         currentpos = (int)((iter-*burnin)/(*thinby));
         // Sample a chronology
         for(i=0;i<*n;i++) currchron[i] = allchrons[(int)currentpos][i];
         diff(currchron,n,diffchron);
-		// Sample K
-	    for(i=0;i<*n;i++) {
-    	    for(l=0;l<*G;l++) mixpro[l] = MyMixPro[i][l];
-    	    K[i] = sample(mixseq, *G, mixpro);
-	    }        
-
+		
+        // Store the used chronology
         for(i=0;i<*n;i++) chronstore[countchron+i] = currchron[i];
         countchron += *n;
 
-		for(j=0;j<*m;j++) {
-			for(i=0;i<*n-1;i++) vstore[countv+i] = v[i][j];
-			countv += *n-1;
-
-            // Calculate some climates
-			for(i=0;i<*n;i++) {
-                mujk[i] =  MyMixMean[i][j][K[i]];
-                Djk[i] = MyMixPrec[i][K[i]];
-                Dmu[i] = Djk[i]*mujk[i];
-            }
+        // Store current z values
+		for(i=0;i<*n;i++) zstore[countz+i] = Z[i];
+		countz += *n;
+        
+        // Store phi1 and phi2
+        for(j=0;j<*m;j++) {
+            phi1store[countphi1+j] = phi1[j];
+            phi2store[countphi2+j] = phi2[j];
+        }
+        countphi1 += *m;
+        countphi2 += *m;
+        
+        for(j=0;j<*m;j++) {
             
-			for(l=0;l<*n-1;l++) tempv[l] = v[l][j];
-            maketri(tempv,*n,Djk,triupper,tridiag,trilower);       
+            for(i=0;i<*n-1;i++) vstore[countv+i] = v[i][j];
+            countv += *n-1;
+
+            // Generate n independent random normals
+            for(l=0;l<*n;l++) rannormal[l] = rnorm(0,1);
+
+            for(l=0;l<*n-1;l++) tempv[l] = v[l][j];
+            for(l=0;l<*n;l++) tempDM[l] = DM[l][j];
+            for(l=0;l<*n;l++) tempR[l] = R[l][j];
+            
+            // Create the tri-diagonal martix Q, stored in triupper, tridiag and trilower
+            maketri(tempv,*n,D,triupper,tridiag,trilower);
 
             // Create cholesky decomposition of the tridiag
             CholTriDiag(tridiag,triupper,*n,choldiag,chollower);
 
-            // Generate n independent random normals
-            for (l=0;l<*n;l++) rannormal[l] = rnorm(0,1);
-
             // Solve the cholesky decomposition
-            trisolve (*n, chollower,choldiag, cholzeros, rannormal, mvnvar);
+            trisolve(*n, chollower,choldiag, cholzeros, rannormal, mvnvar);
 
             // Get the mean
-            trisolve (*n, trilower,tridiag, triupper, Dmu, VDmu);
+            trisolve(*n, trilower,tridiag, triupper, tempDM, tempR);
 
-            // Output the climates 
-            for(i=0;i<*n;i++) tempc[i] = VDmu[i] + mvnvar[i];       
-                                                                                                                        
+            // Output the climates
+            for(i=0;i<*n;i++) tempc[i] = tempR[i] + mvnvar[i];
+
             // Store the climates in the right place
             for(i=0;i<*n;i++) cstore[countc+i] = tempc[i];
             countc += *n;
-
-		}
-    
-    // End of storage if statement
-    }
+            // Need to be careful with c as now we're storing them in a weird order
+            
+        // End of j loop through climate dimensions
+        }
         
+    
+    // End of storage loop
+    }
+
+    // Loop through climate dimensions to update v
+    for(j=0;j<*m;j++) {
+            
+        for(l=0;l<*n-1;l++) tempv[l] = v[l][j];
+        for(l=0;l<*n;l++) tempDM[l] = DM[l][j];
+        for(l=0;l<*n;l++) tempR[l] = R[l][j];
+        
+        // Create the tri-diagonal martix Q, stored in triupper, tridiag and trilower
+        maketri(tempv,*n,D,triupper,tridiag,trilower);
+        // Find R from solution given in appendix to paper
+        trisolve(*n,trilower,tridiag,triupper,tempDM,tempR);
+        // Finally create MDR
+        MDR[j] = 0;
+        for(l=0;l<*n;l++) MDR[j] += tempDM[l]*tempR[l];
+        
+        // Sample a new v
+        for(i=0;i<*n-1;i++) {
+            
+            // For some reason I found it easier to accept new values on the volatility scale
+            vstar = truncatedwalk(v[i][j], *vmhsd, 0, LARGE);
+            vstarrat = truncatedrat(v[i][j], *vmhsd, 0, LARGE, vstar);
+            for(l=0;l<*n-1;l++) tempvstar[l] = tempv[l];
+            tempvstar[i] = vstar;
+            
+            // Find log ratio of determinant
+            for(l=0;l<*n;l++) B[l] = 0.0;
+            B[i] = 1.0;
+            B[i+1] = -1.0;
+            trisolve (*n, trilower,tridiag, triupper, B, S);
+            tBS = S[i]-S[i+1];
+            logdetratio[j] = log(1+(1/vstar-1/v[i][j])*tBS);
+            
+            // Calculate Rstar
+            maketri(tempvstar,*n,D,triupper,tridiag,trilower);
+            trisolve(*n,trilower,tridiag,triupper,tempDM,tempRstar);
+
+            //Calculate MDRstar
+            MDRstar[j] = 0;
+            for(l=0;l<*n;l++) MDRstar[j] += tempDM[l]*tempRstar[l];
+
+            logRv = -0.5*log(vstar/tempv[i]) -0.5*logdetratio[j] + 0.5*MDRstar[j] - 0.5*MDR[j] + dlinvgauss2(vstar,phi1[j]*diffchron[i],phi2[j]*diffchron[i]) - dlinvgauss2(tempv[i],phi1[j]*diffchron[i],phi2[j]*diffchron[i]);
+            
+            //Rprintf("logRv=%lf \n",logRv);
+            
+            //Rprintf("i=%i, j=%i, v=%lf, vstar=%lf, vstarrat=%lf logRv=%lf logdetratio[j]=%lf MDRstar[j]=%lf MDR[j]=%lf dligstar=%lf dlig=%lf\n",i,j,v[i][j],vstar,vstarrat,logRv,logdetratio[j],MDRstar[j],MDR[j],dlinvgauss2(vstar,phi1[j]*diffchron[i],phi2[j]*diffchron[i]),dlinvgauss2(tempv[i],phi1[j]*diffchron[i],phi2[j]*diffchron[i]));
+            
+            accept = (int)UpdateMCMC(logRv,1,0,vstarrat);
+            if(accept==1) {
+                v[i][j] = vstar;
+                tempv[i] = vstar;
+                maketri(tempv,*n,D,triupper,tridiag,trilower);
+                for(l=0;l<*n;l++) tempR[l] = tempRstar[l];
+                for(l=0;l<*n;l++) R[l][j] = tempRstar[l];
+                MDR[j] = MDRstar[j];
+            }
+            
+        } // End of i loop for v update
+
+    // End of loop through climate dimensions
+    }
+    
+    
+    // Sample a new z
+    for(i=0;i<*n;i++) {
+        for(l=0;l<*n;l++) Zstar[l] = Z[l];
+        Zstar[i] = sample(mixseq, *G, eqprob);
+        
+        for(j=0;j<*m;j++) {
+            for(l=0;l<*n;l++) Mstar[l][j] =  MyMixMean[l][j][Zstar[l]];
+            for(l=0;l<*n;l++) DMstar[l][j] = D[l]*Mstar[l][j];
+            MDMstar[j] = MDM[j] - M[i][j]*DM[i][j] + Mstar[i][j]*DMstar[i][j];
+            
+            // Create Rstar
+            for(l=0;l<*n-1;l++) tempv[l] = v[l][j];
+            for(l=0;l<*n;l++) tempDM[l] = DMstar[l][j];
+            for(l=0;l<*n;l++) tempR[l] = R[l][j];
+
+            maketri(tempv,*n,D,triupper,tridiag,trilower);
+            trisolve(*n,trilower,tridiag,triupper,tempDM,tempR);
+           
+            MDRstar[j] = 0;
+            for(l=0;l<*n;l++) MDRstar[j] += tempDM[l]*tempR[l];            
+        }
+                
+        logRz = log(MyMixPro[i][Zstar[i]]/MyMixPro[i][Z[i]]);
+        for(j=0;j<*m;j++) {
+            logRz += - 0.5*MDMstar[j] + 0.5*MDRstar[j] + 0.5*MDM[j] - 0.5*MDR[j];
+        }
+        
+        accept = (int)UpdateMCMC(logRz,1,0,1);
+        if(accept==1) {
+            Z[i] = Zstar[i];
+            for(j=0;j<*m;j++) {
+                for(l=0;l<*n;l++) M[l][j] = Mstar[l][j];
+                for(l=0;l<*n;l++) DM[l][j] = DMstar[l][j];
+                MDM[j] = MDMstar[j];
+                MDR[j] = MDRstar[j];
+            
+                for(l=0;l<*n-1;l++) tempv[l] = v[l][j];
+                for(l=0;l<*n;l++) tempDM[l] = DMstar[l][j];
+                for(l=0;l<*n;l++) tempR[l] = R[l][j];
+                maketri(tempv,*n,D,triupper,tridiag,trilower);
+                trisolve(*n,trilower,tridiag,triupper,tempDM,tempR);
+                for(l=0;l<*n;l++) R[l][j] = tempR[l];
+            }
+        }
+    
+    // End of loop for z
+	}
+    
+    // Sample new phi1 and phi2
+    for(j=0;j<*m;j++) {
+        phi1star = truncatedwalk(phi1[j], *phi1mhsd, 0, LARGE);
+        phi1starrat = truncatedrat(phi1[j], *phi1mhsd, 0, LARGE, phi1star);
+
+        logRphi1 = dlnorm(phi1star,phi1dlmean[j],phi1dlsd[j],1) - dlnorm(phi1[j],phi1dlmean[j],phi1dlsd[j],1);
+        for(i=0;i<*n-1;i++) logRphi1 += dlinvgauss2(v[i][j],phi1star*diffchron[i],phi2[j]*diffchron[i]) - dlinvgauss2(v[i][j],phi1[j]*diffchron[i],phi2[j]*diffchron[i]);
+        //for(i=0;i<*n-1;i++) Rprintf("i=%i, v=%lf, first=%lf, second=%lf diffchron=%lf \n",i,v[i][j],dlinvgauss2(v[i][j],phi1star*diffchron[i],phi2[j]*diffchron[i]), dlinvgauss2(v[i][j],phi1[j]*diffchron[i],phi2[j]*diffchron[i]),diffchron[i]);
+        
+        //Rprintf("logRphi1=%lf j=%i, phi1star=%lf, phi1starrat=%lf, phi1[j]=%lf, dlnorm(phi1star,phi1dlmean[j],phi1dlsd[j],1)=%lf, dlnorm(phi1[j],phi1dlmean[j],phi1dlsd[j],1)=%lf, \n",logRphi1,j,phi1star,phi1starrat,phi1[j],dlnorm(phi1star,phi1dlmean[j],phi1dlsd[j],1),dlnorm(phi1[j],phi1dlmean[j],phi1dlsd[j],1));
+        phi1[j] = UpdateMCMC(logRphi1,phi1star,phi1[j],phi1starrat);
+
+        phi2star = truncatedwalk(phi2[j], *phi2mhsd, 0, LARGE);
+        phi2starrat = truncatedrat(phi2[j], *phi2mhsd, 0, LARGE, phi2star);
+
+        logRphi2 = dlnorm(phi2star,phi2dlmean[j],phi2dlsd[j],1) - dlnorm(phi2[j],phi2dlmean[j],phi2dlsd[j],1);
+        for(i=0;i<*n-1;i++) logRphi2 += dlinvgauss2(v[i][j],phi1[j]*diffchron[i],phi2star*diffchron[i]) - dlinvgauss2(v[i][j],phi1[j]*diffchron[i],phi2[j]*diffchron[i]);
+
+        //Rprintf("logRphi2=%lf \n",logRphi2);
+        phi2[j] = UpdateMCMC(logRphi2,phi2star,phi2[j],phi2starrat);
+    
+    
+    // End of j loop updating phi1 and phi2
+    }
+    
+    
 // End of iterations loop
 }
 
@@ -337,142 +426,6 @@ R_FlushConsole();
 Rprintf("Completed: 100.00 %%");
 Rprintf("\n");
 R_FlushConsole();
+
 // End of function
 }
-
-
-/*
-            
-error("Stopped here!");
-Rprintf("muval[1]=%lf \n",muval[0]);
-Rprintf("phival[1]=%lf \n",phival[0]);
-Rprintf("vstart[1]=%lf \n",vstart[0]);
-Rprintf("dlinvgauss2(vstart[1],mu[1],phi[1])=%lf \n",dlinvgauss2(vstart[0],muval[0],phival[0]));
-error("Stop! \n");
-for(i=0;i<*n;i++) Rprintf("currchron[i]=%lf \n",currchron[i]);
-for(i=0;i<*n-1;i++) Rprintf("diffchron[i]=%lf \n",diffchron[i]);
-
-
-double *temppro,*tempphi,*temptheta,*diffthetas,sigmasqnew,alphanew,deltanew,alpharat;
-int accept,countth=0,countsig=0,counta=0,countd=0,countchron=0;
-diffthetas = (double *)calloc(*m-1, sizeof(double));
-temppro = (double *)calloc(*nummix, sizeof(double));
-tempphi = (double *)calloc(*m-1, sizeof(double));
-temptheta = (double *)calloc(*m, sizeof(double));
-if(diffthetas==NULL) error("Can't allocate memory");
-if(temppro==NULL) error("Can't allocate memory");
-*/
-
-        
-      //  if(v[148][0]==100) {
-        //    for(l=0;l<*n;l++) Rprintf("trilower=%lf tridiag=%lf triupper=%lf Dmu=%lf VDmu=%lf \n",trilower[l],tridiag[l],triupper[l],Dmu[l],VDmu[l]);
-          //  error("BAD");
-        //}
-
-    /*if(iter=20) {
-        Rprintf("\n v[i][j] = \n");
-        for(i=0;i<*n-1;i++) {
-            for(j=0;j<*m;j++) Rprintf("%lf ",v[i][j]);
-            Rprintf("\n");
-        }
-        error("Got to here");
-    }*/
-        /*if(i==148 & j==0) {
-            Rprintf("\n v=%lf, vstar=%lf VDmu[i]%lf VDmu[i+1]=%lf \n",v[i][j],vstar,VDmu[i],VDmu[i+1]);
-            //error("Got to here");
-        }*/
-/*
-Rprintf("mu[j]=%lf, mustar=%lf, mumhsd=%lf, logRmu=%lf \n",mu[j],mustar,*mumhsd,logRmu);
-        error("Good?\n");
-        for(i=0;i<*n-1;i++) {
-    for(j=0;j<*m;j++) Rprintf("%lf ",v[i][j]);
-    Rprintf("\n");
-    }
-    if(iter=500) error("V's ok?\n");
-     for(i=0;i<(*n-1);i++) {
-            Rprintf("%i v=%lf \n",i,v[i][j]);
-        } 
-       Rprintf("mu[j]=%lf, mustar=%lf, mumhsd=%lf, logRmu=%lf \n",mu[j],mustar,*mumhsd,logRmu);
-       Rprintf("j=%i, phi[j]=%lf \n",j,phi[j]);
-               Rprintf("j=%i, mu[j]=%lf, mustar=%lf, mumhsd=%lf, logRmu=%lf, bit1=%lf, bit2=%lf, bit3=%lf \n",j,mu[j],mustar,*mumhsd,logRmu,((((double)*n-1)/2)+*mupar1-1)*(log(mustar)-log(mu[j])),0.5*(phi[j]*u1*(1/mustar-1/mu[j])),0.5*(phi[j]*u3+2*(*mupar2))*(mustar-mu[j]));
-        Rprintf("phi=%lf, par1=%lf, par2=%lf \n",phi[j],((double)*n-1)/2+*phipar1,1/(u1/(2*mu[j])-u2+u3*mu[j]/2));
-Rprintf("Got to here \n");
-     for(l=0;l<*n;l++) Rprintf("trilower=%lf tridiag=%lf triupper=%lf Dmu=%lf VDmu=%lf \n",trilower[l],tridiag[l],triupper[l],Dmu[l],VDmu[l]);
-	    // for(l=0;l<*n;l++) Rprintf("tempv=%lf *n=%i Djk=%lf diffchron=%lf \n",tempv[l],*n,Djk[l],diffchron[l]);
-		for(i=0;i<*n-1;i++) {
-			for(l=0;l<*m;l++)Rprintf("v=%lf ",v[i][l]);
-			Rprintf("\n");
-		}
-
-*/
-/*
-    // Update K
-
-    for(i=0;i<*n;i++) {
-        temp = sample(mixseq, *G, mixpro);
-        kstar = mixseq[(int)temp];
-        for(l=0;l<*n;l++) Kstar[l] = K[l];
-        Kstar[i]=kstar;
-
-
-        logRk = 0;
-        for(j=0;j<*m;j++) {
-            for(l=0;l<*n;l++) {
-                mujk[l] =  MyMixMean[l][j][(int)K[l]];
-
-                Djk[l] = MyMixPrec[l][(int)K[l]];
-            }
-            for(l=0;l<*n;l++) Dmu[l] = mujk[l]*Djk[l];
-            for(l=0;l<*n-1;l++) tempv[l] = v[l][j];
-
-
-            maketri(tempv,*n,Djk,triupper,tridiag,trilower);       
-			
-            trisolve (*n, trilower,tridiag, triupper, Dmu, VDmu);
-			
-            for(l=0;l<*n;l++) {
-                mujkstar[l] =  MyMixMean[l][j][(int)Kstar[l]];
-
-                Djkstar[l] = MyMixPrec[l][(int)Kstar[l]];
-            }
-			
-            for(l=0;l<*n;l++) Dmustar[l] = mujkstar[l]*Djkstar[l];
-            for(l=0;l<*n-1;l++) tempv[l] = v[l][j];
-
-            maketri(tempv,*n,Djkstar,triupper,tridiag,trilower);       
-			
-                                  
-            trisolve (*n, trilower,tridiag, triupper, Dmustar, VDmustar);
-            for(l=0;l<*n;l++) ones[l] = 0.0;
-
-            ones[i] = 1.0;
-            trisolve (*n, trilower,tridiag, triupper, ones, Vone);
-
-            oneVone = Vone[i];
-            exp1bit = 0.0;
-            for(l=0;l<*n;l++) exp1bit = mujkstar[l]*Djkstar[l]*mujkstar[l]-mujk[l]*Djk[l]*mujk[l];
-
-            exp2bit = 0.0;
-            for(l=0;l<*n;l++) exp2bit = mujk[l]*Djk[l]*VDmu[l]-mujkstar[l]*Djkstar[l]*VDmustar[l];
-            logdetratio = -log(1+(Djkstar[i]-Djk[i])*oneVone);
-            
-            logRk += - 0.5*exp1bit-0.5*exp2bit+0.5*logdetratio + log(MyMixPro[i][(int)kstar])-log(MyMixPro[i][(int)K[i]])+0.5*log(Djkstar[i])-0.5*log(Djk[i]);
-
-            
-        } // End of j loop updating k
-    
-        K[i] = UpdateMCMC(logRk,kstar,K[i],1.0); 
-            
-
-    } // End of i loop updating k
-    
-    for(i=*n-10;i<*n;i++) {
-                for(l=*n-10;l<*n;l++) Rprintf("%4.2lf ",bigQ[i][l]);
-                //Rprintf("%4.2lf ",trilower[i]);
-                Rprintf("\n");
-            }
-
-//            for(l=0;l<*n;l++) Rprintf("diag=%lf, upp=%lf, choldiag=%lf, chollower=%lf \n",tridiag[l],triupper[l],choldiag[l],chollower[l]);
-            for(l=0;l<*n;l++) Rprintf("tempc = %lf \n",tempc[l]);
-            
-*/    

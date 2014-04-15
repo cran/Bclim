@@ -26,3 +26,4 @@ int samplegrid(int gridsize,int oldindex,int step);
 double dlinvgauss2(double x, double mu, double phi);
 void CreateUs(int n, double *vj, double phipar2, double u1, double u2, double u3);
 void CholTriDiag(double *alpha, double *beta, int n, double *delta, double *l);
+double logdetTriDiag(double *a, double *b, double*c, int n);
