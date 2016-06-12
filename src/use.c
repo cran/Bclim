@@ -580,7 +580,7 @@ void CreateUs(int n, double *vj, double phipar2, double u1, double u2, double u3
     u2 = ((double)n-1)-phipar2;
     u3 = ((double)n-1)*meanvr;
 
-    Rprintf("u1=%lf, u2=%lf u3=%lf \n", u1,u2,u3);
+    //Rprintf("u1=%lf, u2=%lf u3=%lf \n", u1,u2,u3);
 
 }
 

@@ -198,10 +198,11 @@ for(j=0;j<*m;j++) {
      }
 }
 
+Rprintf("Optimising parameters:\n");
+  
 // Start iterations loop
 double progress=0;
 for(iter=0;iter<*iterations;iter++) {
-
 
 	// Check if someone's pressed escape
 	R_CheckUserInterrupt();
@@ -210,7 +211,7 @@ for(iter=0;iter<*iterations;iter++) {
 	if(iter%*reportevery==0) {
 	    progress = (double) 100*iter/ *iterations;
         Rprintf("\r");
-        Rprintf("Completed: %4.2f %%",progress);
+        Rprintf("%3.2f%% completed",progress);
         //Rprintf("Completed: %i ",iter);
 	    Rprintf("\r");
 	    R_FlushConsole();
@@ -229,8 +230,8 @@ for(iter=0;iter<*iterations;iter++) {
         countchron += *n;
 
         // Store current z values
-		for(i=0;i<*n;i++) zstore[countz+i] = Z[i];
-		countz += *n;
+		    for(i=0;i<*n;i++) zstore[countz+i] = Z[i];
+		    countz += *n;
         
         // Store phi1 and phi2
         for(j=0;j<*m;j++) {
